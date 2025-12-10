@@ -106,8 +106,12 @@ def main_loop(batch_size=config.batch_size, model_type='', tensorboard=True):
         model.load_state_dict(model2_dict)
         logger.info('Load successful!')
 
-    else: raise TypeError('Please enter a valid name for the model type')
+    elif model_type == 'UNet':
+        from nets.UNet import UNet
+        logger.info('Using standard U-Net architecture')
+        model = UNet(n_channels=config.n_channels, n_classes=config.n_labels)
 
+    else: raise TypeError('Please enter a valid name for the model type')
 
     model = model.cuda()
     # if torch.cuda.device_count() > 1:
@@ -170,7 +174,6 @@ def main_loop(batch_size=config.batch_size, model_type='', tensorboard=True):
 
     return model
 
-
 if __name__ == '__main__':
     deterministic = True
     if not deterministic:
@@ -190,3 +193,4 @@ if __name__ == '__main__':
     logger = logger_config(log_path=config.logger_path)
     model = main_loop(model_type=config.model_name, tensorboard=True)
 
+train_model.py
