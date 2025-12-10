@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2021/6/19 11:30 上午
-# @Author  : Haonan Wang
-# @File    : Load_Dataset.py
-# @Software: PyCharm
 import numpy as np
 import torch
 import random
@@ -132,53 +127,61 @@ class ImageToImage2D(Dataset):
         return len(os.listdir(self.input_path))
 
     def __getitem__(self, idx):
-
         image_filename = self.images_list[idx]
-        #print(image_filename[: -3])
+        
         # read image
-        # print(os.path.join(self.input_path, image_filename))
-        # print(os.path.join(self.output_path, image_filename[: -3] + "png"))
-        # print(os.path.join(self.input_path, image_filename))
         image = cv2.imread(os.path.join(self.input_path, image_filename))
-        # print("img",image_filename)
-        # print("1",image.shape)
         image = cv2.resize(image,(self.image_size,self.image_size))
-        # print(np.max(image), np.min(image))
-        # print("2",image.shape)
-        # read mask image
-        mask = cv2.imread(os.path.join(self.output_path, image_filename[: -3] + "png"),0)
-        # print("mask",image_filename[: -3] + "png")
-        # print(np.max(mask), np.min(mask))
+        
+        # read mask image - 확장자 처리 개선
+        # 이미지 파일명에서 확장자 제거
+        base_name = os.path.splitext(image_filename)[0]
+        
+        # GlaS dataset의 경우 _anno 접미사 처리
+        # dataset_path에 'GlaS'가 포함되어 있는지 확인
+        is_glas = 'GlaS' in self.dataset_path
+        
+        # 마스크 파일 찾기 (여러 확장자 시도)
+        mask_path = None
+        for ext in ['.bmp', '.png', '.tif', '.tiff']:
+            # GlaS의 경우 _anno 접미사 추가
+            if is_glas:
+                potential_path = os.path.join(self.output_path, base_name + '_anno' + ext)
+            else:
+                potential_path = os.path.join(self.output_path, base_name + ext)
+            
+            if os.path.exists(potential_path):
+                mask_path = potential_path
+                break
+        
+        # GlaS가 아닌 경우도 _anno 있는지 확인 (fallback)
+        if mask_path is None and not is_glas:
+            for ext in ['.bmp', '.png', '.tif', '.tiff']:
+                potential_path = os.path.join(self.output_path, base_name + '_anno' + ext)
+                if os.path.exists(potential_path):
+                    mask_path = potential_path
+                    break
+        
+        if mask_path is None:
+            raise FileNotFoundError(f"Mask not found for {image_filename}")
+        
+        mask = cv2.imread(mask_path, 0)
         mask = cv2.resize(mask,(self.image_size,self.image_size))
-        # print(np.max(mask), np.min(mask))
+        
+        # 마스크 정규화 (0/255 -> 0/1)
         mask[mask<=0] = 0
-        # (mask == 35).astype(int)
         mask[mask>0] = 1
-        # print("11111",np.max(mask), np.min(mask))
 
         # correct dimensions if needed
         image, mask = correct_dims(image, mask)
-        # image, mask = F.to_pil_image(image), F.to_pil_image(mask)
-        # print("11",image.shape)
-        # print("22",mask.shape)
         sample = {'image': image, 'label': mask}
 
         if self.joint_transform:
             sample = self.joint_transform(sample)
-        # sample = {'image': image, 'label': mask}
-        # print("2222",np.max(mask), np.min(mask))
 
         if self.one_hot_mask:
             assert self.one_hot_mask > 0, 'one_hot_mask must be nonnegative'
             mask = torch.zeros((self.one_hot_mask, mask.shape[1], mask.shape[2])).scatter_(0, mask.long(), 1)
-        # mask = np.swapaxes(mask,2,0)
-        # print(image.shape)
-        # print("mask",mask)
-        # mask = np.transpose(mask,(2,0,1))
-        # image = np.transpose(image,(2,0,1))
-        # print(image.shape)
-        # print(mask.shape)
-        # print(sample['image'].shape)
 
         return sample, image_filename
 
