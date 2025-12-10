@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2021/6/19 2:14 下午
-# @Author  : Haonan Wang
-# @File    : Train_one_epoch.py
-# @Software: PyCharm
 import torch.optim
 import os
 import time
@@ -10,7 +5,6 @@ from utils import *
 import Config as config
 import warnings
 warnings.filterwarnings("ignore")
-
 
 def print_summary(epoch, i, nb_batch, loss, loss_name, batch_time,
                   average_loss, average_time, iou, average_iou,
@@ -37,7 +31,6 @@ def print_summary(epoch, i, nb_batch, loss, loss_name, batch_time,
     logger.info(summary)
     # print summary
 
-
 ##################################################################################
 #=================================================================================
 #          Train One Epoch
@@ -62,14 +55,12 @@ def train_one_epoch(loader, model, criterion, optimizer, writer, epoch, lr_sched
         images, masks = sampled_batch['image'], sampled_batch['label']
         images, masks = images.cuda(), masks.cuda()
 
-
         # ====================================================
         #             Compute loss
         # ====================================================
 
         preds = model(images)
         out_loss = criterion(preds, masks.float())  # Loss
-
 
         if model.training:
             optimizer.zero_grad()
@@ -79,14 +70,13 @@ def train_one_epoch(loader, model, criterion, optimizer, writer, epoch, lr_sched
         # print(masks.size())
         # print(preds.size())
 
-
         # train_iou = 0
         train_iou = iou_on_batch(masks,preds)
         train_dice = criterion._show_dice(preds, masks.float())
 
         batch_time = time.time() - end
         # train_acc = acc_on_batch(masks,preds)
-        if epoch % config.vis_frequency == 0 and logging_mode is 'Val':
+        if epoch % config.vis_frequency == 0 and logging_mode == 'Val':
             vis_path = config.visualize_path+str(epoch)+'/'
             if not os.path.isdir(vis_path):
                 os.makedirs(vis_path)
@@ -139,3 +129,4 @@ def train_one_epoch(loader, model, criterion, optimizer, writer, epoch, lr_sched
     #         lr_scheduler.step(train_dice_avg)
     return average_loss, train_dice_avg
 
+train_one_epoch.py
